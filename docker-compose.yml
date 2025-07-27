@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   api:
-    build: ./API
+    build: ./BackEnd
     container_name: dotnet_api
     ports:
       - "8080:80"
@@ -13,14 +13,14 @@ services:
 
   db:
     image: postgres:15
-    container_name: postgres_db
+    container_name: db
     environment:
       - POSTGRES_PASSWORD=mysecretpassword
     ports:
       - "5432:5432"
     networks:
       - backend
-      
+
 networks:
   backend:
     driver: bridge
