@@ -1,0 +1,23 @@
+{
+  "uid": "tempo-default",
+  "title": "Tempo Traces Overview",
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "traceql-search",
+      "title": "Search Traces",
+      "datasource": "Tempo",
+      "targets": [],
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 }
+    },
+    {
+      "type": "nodeGraph",
+      "title": "Service Graph",
+      "datasource": "Tempo",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 10 }
+    }
+  ],
+  "schemaVersion": 37,
+  "version": 1,
+  "refresh": "10s"
+}

@@ -1,0 +1,36 @@
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+        grpc:
+          endpoint: tempo:4007
+
+# ingester:
+#   max_block_duration: 1h               # cut the headblock when this much time passes. this is being set for demo purposes and should probably be left alone normally
+
+ingester:
+  trace_idle_period: 10s
+  max_block_duration: 1m
+
+
+compactor:
+  compaction:
+    block_retention: 720h                # overall Tempo trace retention. set for demo purposes, default is 14 days
+
+
+metrics_generator:
+  storage:
+    path: /var/tempo/generator/wal
+
+
+storage:
+  trace:
+    backend: local                     # backend configuration to use
+    wal:
+      path: /var/tempo/wal             # where to store the the wal locally
+    local:
+      path: /var/tempo/blocks

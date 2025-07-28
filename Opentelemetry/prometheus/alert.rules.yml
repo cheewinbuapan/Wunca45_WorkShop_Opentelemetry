@@ -1,0 +1,109 @@
+groups:
+  - name: host-alerts
+    rules:
+      # CPU > 80%
+      - alert: HighCPUUsage
+        expr: (100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)) > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage > 80% for more than 1 minute."
+
+      # Memory > 80%
+      - alert: HighMemoryUsage
+        expr: (node_memory_Active_bytes / node_memory_MemTotal_bytes * 100) > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Memory usage on {{ $labels.instance }}"
+          description: "Memory usage > 80% for more than 1 minute."
+
+      # Disk usage > 90%
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} - node_filesystem_free_bytes{fstype!~"tmpfs|overlay"}) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Disk usage on {{ $labels.instance }}"
+          description: "Disk usage > 90% for more than 2 minutes."
+
+      # Instance down
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+          description: "Prometheus target {{ $labels.instance }} is not responding for more than 1 minute."
+
+      # HTTP service not available (port 80)
+      - alert: HTTPServiceDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP service on {{ $labels.instance }} is down"
+          description: "HTTP endpoint did not respond successfully."
+
+
+  - name: kubernetes alerts
+    rules:
+      - alert: pod_cpu_more_than_80
+        expr: avg by(namespace, pod, cluster) (rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[1m]) * 100) / avg by(namespace, pod, cluster) (kube_pod_container_resource_requests_cpu_cores{container!="POD",container!=""}) > 80
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          description: 'cpu is high for {{ $labels.pod }} in  namespace: {{ $labels.namespace }} value is {{ humanize $value }}%'
+          summary: 'cpu is high for {{ $labels.pod }} in  Cluster: {{ $labels.cluster }}, namespace: {{ $labels.namespace }}'
+
+      - alert: pod_cpu_more_than_70
+        expr: avg by(namespace, pod, cluster) (rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[1m]) * 100) / avg by(namespace, pod, cluster) (kube_pod_container_resource_requests_cpu_cores{container!="POD",container!=""}) > 70 < 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: 'cpu is high for {{ $labels.pod }} in  namespace: {{ $labels.namespace }} value is {{ humanize $value }}%'
+          summary: 'cpu is high for {{ $labels.pod }} in  Cluster: {{ $labels.cluster }},  namespace: {{ $labels.namespace }}'
+
+      - alert: pod_memory_more_than_90
+        expr: (((sum (container_memory_working_set_bytes{image!="",name=~"^k8s_.*",container!="POD" }) by (pod, cluster, namespace)) / (sum(kube_pod_container_resource_requests{resource="memory"}) by (pod, cluster, namespace)))) * 100   > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          description: 'memory is high for {{ $labels.pod }} in  namespace: {{ $labels.namespace }} value is {{ humanize $value }}%'
+          summary: 'memory is high for {{ $labels.pod }} in  Cluster: {{ $labels.cluster }}, namespace: {{ $labels.namespace }}'
+
+      - alert: pod_memory_more_than_80
+        expr: (((sum (container_memory_working_set_bytes{image!="",name=~"^k8s_.*",container!="POD" }) by (pod, cluster, namespace)) / (sum(kube_pod_container_resource_requests{resource="memory"}) by (pod, cluster, namespace)))) * 100   > 80 < 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: 'memory is high for {{ $labels.pod }} in  namespace: {{ $labels.namespace }} value is {{ humanize $value }}%'
+          summary: 'memory is high for {{ $labels.pod }} in  Cluster: {{ $labels.cluster }},  namespace: {{ $labels.namespace }}'
+
+      - alert: pod_status_change_alert
+        expr: min_over_time((sum by(pod, namespace, phase, cluster) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed|CrashLoopBackOff|Error"})[5m:1m])) > 0
+        for: 1m
+        labels:          
+          severity: critical
+        annotations:
+          description: 'pod_name: {{ $labels.pod }}, namespace: {{ $labels.namespace }} phase: {{ $labels.phase }}'
+          summary: 'pod_name: {{ $labels.pod }}, Cluster: {{ $labels.cluster }}, namespace: {{ $labels.namespace }} phase: {{ $labels.phase }}'
+
+      - alert: KubePodCrashLoopingReason
+        expr: max_over_time(kube_pod_container_status_waiting_reason{reason=~"ErrImagePull|ImagePullBackOff|InvalidImageName|CreateContainerError|CreateContainerConfigError|CrashLoopBackOff|ContainerCreating"}[2m]) >= 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is in waiting state (reason: "CrashLoopBackOff").'
+          summary: 'Cluster: {{ $labels.cluster }}, Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is in waiting state (reason: "CrashLoopBackOff").'

@@ -12,4 +12,8 @@ RUN dotnet publish -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+ENV ORIGIN=* 
+ENV TZ=Asia/Bangkok
+ENV ASPNETCORE_HTTP_PORTS=80
 ENTRYPOINT ["dotnet", "itsc_dotnet_practice.dll"]

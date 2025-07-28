@@ -1,0 +1,34 @@
+apiVersion: 1
+
+providers:
+  - name: 'Default'
+    folder: '' # an empty string for folder name will put dashboards inside the General group in Grafana
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards
+  - name: 'Lightweight APM'
+    folder: 'APM Dashboards'
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/apm-dashboards
+  - name: 'Node Linux'
+    folder: 'Node Linux Dashboards'
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/node-linux
+  - name: 'Node Windows'
+    folder: 'Node Windows Dashboards'
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/node-windows
+  - name: "tempo-dashboards"
+#    orgId: 1
+    folder: "Tempo"
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/tempo
+  - name: "kubernetes-dashboards"
+    folder: "Kubernetes Dashboards"
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/kubernetes-dashboard

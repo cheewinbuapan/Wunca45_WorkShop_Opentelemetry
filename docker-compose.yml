@@ -1,25 +1,236 @@
 version: "3.4"
 
 services:
+  # Backend API Service
   api:
     build: ./BackEnd
     container_name: dotnet_api
+    restart: unless-stopped
     ports:
       - "8080:80"
     depends_on:
-      - db
+      - postgres-node-1
+      - postgres-node-2
+      - postgres-haproxy
+      - otel-collector
     networks:
       - backend
 
-  db:
-    image: postgres:15
-    container_name: db
+  # Database Services
+  postgres-node-1:
+    image: bitnami/postgresql-repmgr:latest
+    container_name: postgres-node-1
+    restart: unless-stopped
     environment:
-      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRESQL_POSTGRES_PASSWORD=adminpassword
+      - POSTGRESQL_DATABASE=repmgr
+      - POSTGRESQL_USERNAME=repmgr
+      - POSTGRESQL_PASSWORD=repmgrpass
+      - REPMGR_USERNAME=repmgr
+      - REPMGR_PASSWORD=repmgrpass
+      - REPMGR_PRIMARY_HOST=postgres-node-1
+      - REPMGR_NODE_NAME=postgres-node-1
+      - REPMGR_NODE_NETWORK_NAME=postgres-node-1
+      - REPMGR_PORT_NUMBER=5432
+      - REPMGR_PARTNER_NODES=postgres-node-1,postgres-node-2
     ports:
       - "5432:5432"
+    volumes:
+      - postgres-node-1-data:/bitnami/postgresql
+      - ./Opentelemetry/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repmgr"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres-node-2:
+    image: bitnami/postgresql-repmgr:latest
+    container_name: postgres-node-2
+    restart: unless-stopped
+    depends_on:
+      - postgres-node-1
+    environment:
+      - POSTGRESQL_POSTGRES_PASSWORD=adminpassword
+      - POSTGRESQL_DATABASE=repmgr
+      - POSTGRESQL_USERNAME=repmgr
+      - POSTGRESQL_PASSWORD=repmgrpass
+      - REPMGR_USERNAME=repmgr
+      - REPMGR_PASSWORD=repmgrpass
+      - REPMGR_PRIMARY_HOST=postgres-node-1
+      - REPMGR_NODE_NAME=postgres-node-2
+      - REPMGR_NODE_NETWORK_NAME=postgres-node-2
+      - REPMGR_PORT_NUMBER=5432
+      - REPMGR_PARTNER_NODES=postgres-node-1,postgres-node-2
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-node-2-data:/bitnami/postgresql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repmgr"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres-haproxy:
+    image: haproxy:latest
+    container_name: postgres-haproxy
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./Opentelemetry/haproxy/postgres.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    depends_on:
+      - postgres-node-1
+      - postgres-node-2
+    networks:
+      - backend
+
+  # Monitoring and Observability Services
+  grafana-node-1:
+    image: grafana/grafana:latest
+    container_name: grafana-node-1
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-node-1-data:/var/lib/grafana
+      - ./Opentelemetry/grafana/provisioning:/etc/grafana/provisioning
+      - ./Opentelemetry/grafana/config/grafana.ini:/etc/grafana/grafana.ini
+    depends_on:
+      - postgres-haproxy
+      - postgres-node-1
+      - postgres-node-2
+    networks:
+      - backend
+
+  grafana-node-2:
+    image: grafana/grafana:latest
+    container_name: grafana-node-2
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-node-2-data:/var/lib/grafana
+      - ./Opentelemetry/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./Opentelemetry/grafana/provisioning:/etc/grafana/provisioning
+      - ./Opentelemetry/grafana/config/grafana.ini:/etc/grafana/grafana.ini
+    depends_on:
+      - postgres-haproxy
+      - postgres-node-1
+      - postgres-node-2
+    networks:
+      - backend
+  
+  nginx:
+    image: nginx:latest
+    container_name: grafana-lb
+    restart: unless-stopped
+    volumes:
+      - ./Opentelemetry/nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "3005:80"
+    depends_on:
+      - grafana-node-1
+      - grafana-node-2
+    networks:
+      - backend
+  
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    container_name: prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./Opentelemetry/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./Opentelemetry/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml
+      - prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+    networks:
+      - backend
+
+  tempo:
+    image: grafana/tempo:2.8.0
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./Opentelemetry/tempo/tempo.yml:/etc/tempo.yaml
+      - tempo:/var/tempo
+    restart: unless-stopped
+    ports:
+      - 3200:3200
+      - 4007:4317
+    depends_on:
+      - otel-collector
+    networks:
+      - backend
+
+  loki:
+    image: grafana/loki:3.5.1
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./Opentelemetry/loki/loki.yml:/etc/loki/local-config.yaml
+      - loki:/loki
+    restart: unless-stopped
+    ports:
+      - 3100:3100
+    networks:
+      - backend
+
+  otel-collector:
+    container_name: otel
+    hostname: otel
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./Opentelemetry/otel/otel.yml:/etc/otel-collector-config.yaml
+    restart: unless-stopped
+    ports:
+      - 8888:8888
+      - 8889:8889
+      - 4317:4317
+      - 9200:55679
+      - 13133:13133
+    networks:
+      - backend
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - ./Opentelemetry/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    ports:
+      - "9093:9093"
+    networks:
+      - backend
+
+volumes:
+  postgres-node-1-data:
+  postgres-node-2-data:
+  grafana-node-1-data:
+  grafana-node-2-data:
+  prometheus:
+  loki:
+  tempo:
 
 networks:
   backend:
