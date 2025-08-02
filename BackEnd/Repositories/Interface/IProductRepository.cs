@@ -11,6 +11,6 @@ public interface IProductRepository
     Task<Product?> GetProductByIdAsync(int id);
     Task<List<Product>> GetProductByQuery(string query);
     Task<Product> CreateProductAsync(ProductDto.Request product);
-    Task<Product> UpdateProductAsync(int id, Product product);
+    Task<Product?> UpdateProductAsync(int id, Product product);
     Task<bool> DeleteProductAsync(int id);
 }

@@ -80,7 +80,7 @@ public class OrderRepository : IOrderRepository
         foreach (var detailReq in request.OrderDetails)
         {
             // Fetch product info for price, name, etc.
-            Product product = await _context.Products.FindAsync(detailReq.ProductId);
+            Product? product = await _context.Products.FindAsync(detailReq.ProductId);
             if (product == null)
                 throw new Exception($"Product with ID {detailReq.ProductId} not found.");
 
@@ -101,7 +101,7 @@ public class OrderRepository : IOrderRepository
         }
 
         _context.Orders.Add(order);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return order;
     }
 
@@ -125,7 +125,7 @@ public class OrderRepository : IOrderRepository
         order.Status = newStatus;
         order.UpdatedAt = DateTime.UtcNow;
         _context.Orders.Update(order);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return order;
     }
     // to update ShippingAddress in order
@@ -140,11 +140,11 @@ public class OrderRepository : IOrderRepository
         {
             throw new KeyNotFoundException($"Order with ID {orderId} not found.");
         }
-        this.UpdateOrderStatusAsync(orderId, "confirmed").Wait();
+        await this.UpdateOrderStatusAsync(orderId, "confirmed");
         order.ShippingAddress = newShippingAddress;
         order.UpdatedAt = DateTime.UtcNow;
         _context.Orders.Update(order);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return order;
     }
     // update status to "Cancelled" for user
@@ -162,7 +162,7 @@ public class OrderRepository : IOrderRepository
         order.Status = "Cancelled";
         order.UpdatedAt = DateTime.UtcNow;
         _context.Orders.Update(order);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return order;
     }
 }
