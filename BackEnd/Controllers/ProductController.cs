@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace itsc_dotnet_practice.Controllers;
 
-[Route("api/[Controller]") ]
+[Route("api/products") ]
 [ApiController]
 [Authorize]
 [Produces("application/json")]
@@ -34,6 +34,13 @@ public class ProductController : ControllerBase
         var product = await _productService.GetProductByIdAsync(id);
         if (product == null) return NotFound("Product not found");
         return Ok(product);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchProducts([FromQuery] string q)
+    {
+        var products = await _productService.GetProductByQuery(q);
+        return Ok(products);
     }
 
     [HttpPost()]
