@@ -74,7 +74,7 @@
 
 ```bash
 # เริ่มต้น services ทั้งหมด (Backend API + Frontend + Monitoring Stack)
-docker compose up -d
+docker compose up -d --build
 
 # ดู logs ของทุก services
 docker compose logs -f
