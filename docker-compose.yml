@@ -16,6 +16,18 @@ services:
     networks:
       - backend
 
+  # Frontend Nuxt Service
+  frontend:
+    build: ./front
+    container_name: nuxt_frontend
+    restart: unless-stopped
+    ports:
+      - "3006:3000"
+    depends_on:
+      - api
+    networks:
+      - backend
+
   # Database Services
   postgres-node-1:
     image: bitnami/postgresql-repmgr:latest

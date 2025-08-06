@@ -30,6 +30,7 @@ string jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "your_audience";
 
 
 // Register DB context
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 String connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")).LogTo(message => Debug.WriteLine(message)));
