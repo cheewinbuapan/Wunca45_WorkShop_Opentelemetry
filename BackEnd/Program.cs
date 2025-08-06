@@ -1,5 +1,4 @@
-﻿using DotNetEnv;
-using AutoMapper;
+﻿using AutoMapper;
 using itsc_dotnet_practice.Data;
 using itsc_dotnet_practice.Document;
 using itsc_dotnet_practice.Document.Interface;
@@ -12,34 +11,34 @@ using itsc_dotnet_practice.Services.Interface;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System;
-using System.Text;
-using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-IConfiguration configuration = builder.Configuration;
-// Load .env variables
-Env.Load();
 
 // Read DB & JWT values with defaults to avoid errors
 
 
-String jwtKey = configuration.GetValue<string>("Jwt:Key");
-String jwtIssuer = configuration.GetValue<string>("Jwt:Issuer");
-String jwtAudience = configuration.GetValue<string>("Jwt:Audience");
-// Register DB context
+string jwtKey = builder.Configuration["JWT_KEY"] ?? "your_jwt_secret_key";
+string jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "your_issuer";
+string jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "your_audience";
 
-String connectionString = configuration.GetConnectionString("DefaultConnection");
+
+// Register DB context
+String connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")).LogTo(message => Debug.WriteLine(message)));
+
 // Register AutoMapper with your UserProfile
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<UserProfile>();
+    cfg.AddProfile<OrderProfile>();
 });
 
 // Register repositories and services
@@ -75,13 +74,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll",
-        policy => policy.AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader());
-});
+
 // Configure Swagger with your Document class providing security schemes
 builder.Services.AddSwaggerGen(options =>
 {
@@ -108,6 +101,14 @@ builder.Services.AddSwaggerGen(options =>
     options.CustomSchemaIds(type => type.FullName.Replace("+", "."));
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy => policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
+});
+
 var app = builder.Build();
 
 // Enable Swagger UI (enable in all environments or restrict with IsDevelopment if you want)
@@ -123,11 +124,12 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var db = services.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
     // Seed users
     UserSeeder.Seed(db);
 
     // Seed products from Pokémon API
-    await ProductSeeder.SeedAsync(services);
+    await ProductSeeder.Seed(services);
 }
 
 app.UseAuthentication();
@@ -135,4 +137,5 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.UseCors("AllowAll");
+
 app.Run();

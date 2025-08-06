@@ -20,23 +20,37 @@ public class OrderRepository : IOrderRepository
         _context = context;
         _mapper = mapper;
     }
-    // to get all ordrers
-     public async Task<List<Order>> GetAllOrdersAsync()
+
+     public async Task<List<Order>> GetAllOrders()
     {
-        return await _context.Orders
+        return _context.Orders
             .Include(o => o.User)
             .Include(o => o.OrderDetails)
-            .ThenInclude(od => od.Product)
-            .ToListAsync();
+                .ThenInclude(od => od.Product)
+            .ToList();
+    }
+    // to get by orderId
+    public async Task<Order> GetOrderById(int orderId)
+    {
+        var order = _context.Orders
+            .Include(o => o.User)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Product)
+            .FirstOrDefault(o => o.Id == orderId);
+        if (order == null)
+        {
+            throw new KeyNotFoundException($"Order with ID {orderId} not found.");
+        }
+        return order;
     }
     // to get all orders for status = ["Pending", "confirmed", "Processing", "Completed", "Cancelled"]
-    public async Task<List<Order>> GetOrdersByStatusAsync(string status)
+    public async Task<List<Order>> GetOrdersByStatus(string status)
     {
         if (string.IsNullOrEmpty(status))
         {
             throw new ArgumentException("Status cannot be null or empty.", nameof(status));
         }
-        var validStatuses = new[] { "pending", "confirmed", "processing", "completed", "cancelled" };
+        var validStatuses = new[] { "pending", "confirm", "reject", "cancel" };
         if (!validStatuses.Contains(status.ToLower()))
         {
             throw new ArgumentException($"Invalid status. Valid statuses are: {string.Join(", ", validStatuses)}", nameof(status));
@@ -45,124 +59,92 @@ public class OrderRepository : IOrderRepository
         // and include related User and OrderDetails with Products
         if (status == "All")
         {
-            return await GetAllOrdersAsync();
+            return await GetAllOrders();
         }
-        return await _context.Orders
+        return _context.Orders
             .Where(o => o.Status == status)
             .Include(o => o.User)
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Product)
-            .ToListAsync();
+            .ToList();
     }
     // to get all orders for spacific user
-    public async Task<List<Order>> GetOrdersByUserIdAsync(int userId)
+    public async Task<List<Order>> GetOrdersByUserId(int userId)
     {
-        return await _context.Orders
+        return _context.Orders
             .Where(o => o.UserId == userId)
             .Include(o => o.User)
             .Include(o => o.OrderDetails)
             .ThenInclude(od => od.Product)
-            .ToListAsync();
+            .ToList();
     }
-    public async Task<Order> CreateOrderAsync(OrderDto.OrderRequest request)
+    public async Task<Order> CreateOrder(OrderDto.OrderRequest request, int userId)
     {
-        // Map the OrderRequest to Order (without details)
-        Order order = _mapper.Map<Order>(request);
-        if (order == null)
+        // Create the order entity
+        Order newOrder = new Order
         {
-            throw new ArgumentNullException(nameof(order), "Order cannot be null.");
-        }
+            UserId = userId,
+            ShippingAddress = request.ShippingAddress,
+            Status = "pending",
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now,
+            OrderDetails = new List<OrderDetail>()
+        };
 
-        // Initialize the OrderDetails collection
-        order.OrderDetails = new List<OrderDetail>();
+        // Add the order to the context and save to generate the OrderId
+        _context.Orders.Add(newOrder);
 
-        // For each OrderDetailRequest, create an OrderDetail entity
-        foreach (var detailReq in request.OrderDetails)
+        // Add order details, now that newOrder.Id is available
+        foreach (var item in request.OrderDetails)
         {
-            // Fetch product info for price, name, etc.
-            Product? product = await _context.Products.FindAsync(detailReq.ProductId);
+            var product = _context.Products.Find(item.ProductId);
             if (product == null)
-                throw new Exception($"Product with ID {detailReq.ProductId} not found.");
-
+            {
+                throw new KeyNotFoundException($"Product with ID {item.ProductId} not found.");
+            }
+            if (product.Stock < item.Quantity)
+            {
+                throw new InvalidOperationException($"Insufficient stock for product {product.Name}. Available: {product.Stock}, Requested: {item.Quantity}");
+            }
             OrderDetail orderDetail = new OrderDetail
-            (
-                productId: product.Id,
-                quantity: detailReq.Quantity,
-                price: product.Price,
-                productName: product.Name,
-                productImageUrl: product.ImageUrl,
-                productDescription: product.Description,
-                productCategory: product.Category,
-                orderId: 0, // Will be set by EF after order is saved
-                userId: request.UserId
-            );
+            {
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                Price = product.Price,
+                ProductName = product.Name,
+                ProductImageUrl = product.ImageUrl,
+                ProductDescription = product.Description,
+                ProductCategory = product.Category,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+                OrderId = newOrder.Id,
+                UserId = userId
+            };
+            newOrder.OrderDetails.Add(orderDetail);
 
-            order.OrderDetails.Add(orderDetail);
+            // Update product stock
+            product.Stock -= item.Quantity;
+            _context.Products.Update(product);
         }
 
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
-        return order;
+        // Save order details and product stock updates
+        _context.SaveChanges();
+
+        return newOrder;
     }
 
-    // to change status of order from "Pending" -> "confirmed" -> "Processing" -> "Completed" -> "Cancelled"
-    public async Task<Order> UpdateOrderStatusAsync(int orderId, string newStatus)
+    // Pending | Confirm | Reject | Cancel
+    public async Task<Order> UpdateOrderStatus(int orderId, string newStatus)
     {
-        if (string.IsNullOrEmpty(newStatus))
-        {
-            throw new ArgumentException("Status cannot be null or empty.", nameof(newStatus));
-        }
-        var validStatuses = new[] { "pending", "confirmed", "processing", "completed", "cancelled" };
-        if (!validStatuses.Contains(newStatus.ToLower()))
-        {
-            throw new ArgumentException($"Invalid status. Valid statuses are: {string.Join(", ", validStatuses)}", nameof(newStatus));
-        }
-        var order = await _context.Orders.FindAsync(orderId);
+        var order = _context.Orders.Find(orderId);
         if (order == null)
         {
             throw new KeyNotFoundException($"Order with ID {orderId} not found.");
         }
         order.Status = newStatus;
-        order.UpdatedAt = DateTime.UtcNow;
+        order.UpdatedAt = DateTime.Now;
         _context.Orders.Update(order);
-        await _context.SaveChangesAsync();
-        return order;
-    }
-    // to update ShippingAddress in order
-    public async Task<Order> UpdateShippingAddressAsync(int orderId, string newShippingAddress)
-    {
-        if (string.IsNullOrEmpty(newShippingAddress))
-        {
-            throw new ArgumentException("Shipping address cannot be null or empty.", nameof(newShippingAddress));
-        }
-        var order = await _context.Orders.FindAsync(orderId);
-        if (order == null)
-        {
-            throw new KeyNotFoundException($"Order with ID {orderId} not found.");
-        }
-        await this.UpdateOrderStatusAsync(orderId, "confirmed");
-        order.ShippingAddress = newShippingAddress;
-        order.UpdatedAt = DateTime.UtcNow;
-        _context.Orders.Update(order);
-        await _context.SaveChangesAsync();
-        return order;
-    }
-    // update status to "Cancelled" for user
-    public async Task<Order> CancelOrderAsync(int orderId)
-    {
-        var order = await _context.Orders.FindAsync(orderId);
-        if (order == null)
-        {
-            throw new KeyNotFoundException($"Order with ID {orderId} not found.");
-        }
-        if (order.Status == "Cancelled")
-        {
-            throw new InvalidOperationException($"Order with ID {orderId} is already cancelled.");
-        }
-        order.Status = "Cancelled";
-        order.UpdatedAt = DateTime.UtcNow;
-        _context.Orders.Update(order);
-        await _context.SaveChangesAsync();
+        _context.SaveChanges();
         return order;
     }
 }

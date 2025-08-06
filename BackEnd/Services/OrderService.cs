@@ -5,6 +5,7 @@ using itsc_dotnet_practice.Services.Interface;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace itsc_dotnet_practice.Services;
@@ -16,37 +17,44 @@ public class OrderService : IOrderService
     {
         _repo = repo;
     }
-    public async Task<List<Order>> GetAllOrdersAsync()
+    public async Task<List<Order>> GetAllOrders()
     {
-        return await _repo.GetAllOrdersAsync();
+        return await _repo.GetAllOrders();
     }
-    public async Task<List<Order>> GetOrdersByStatusAsync(string status)
+    public async Task<List<Order>> GetOrdersByStatus(string status)
     {
-        return await _repo.GetOrdersByStatusAsync(status);
+        return await _repo.GetOrdersByStatus(status);
     }
-    public async Task<List<Order>> GetOrdersByUserIdAsync(int userId)
+    public async Task<List<Order>> GetOrdersByUserId(int userId)
     {
-        return await _repo.GetOrdersByUserIdAsync(userId);
+        return await _repo.GetOrdersByUserId(userId);
     }
-    public async Task<List<Order>> GetOrdersByUserIdAndStatusAsync(int userId, string status)
+    public async Task<List<Order>> GetOrdersByUserIdAndStatus(int userId, string status)
     {
-        var orders = await _repo.GetOrdersByUserIdAsync(userId);
+        var orders = await _repo.GetOrdersByUserId(userId);
         if (status == "All")
         {
             return orders;
         }
         return orders.FindAll(o => o.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
     }
-    public async Task<Order> CreateOrderAsync(OrderDto.OrderRequest request)
+    public async Task<Order> CreateOrder(OrderDto.OrderRequest request, int userId)
     {
-        return await _repo.CreateOrderAsync(request);
+        return await _repo.CreateOrder(request, userId);
     }
-    public async Task<Order> UpdateShippingAddressAsync(int orderId, string newShippingAddress)
+
+    public async Task<Order> UpdateOrderStatus(int orderId, string status)
     {
-        return await _repo.UpdateShippingAddressAsync(orderId, newShippingAddress);
+        var validStatuses = new[] { "pending", "confirm", "reject", "cancel" };
+
+        var normalizedStatus = status.Trim();
+
+        if (!validStatuses.Contains(normalizedStatus, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException($"Invalid status. Valid statuses are: {string.Join(", ", validStatuses)}", nameof(status));
+        }
+
+        return await _repo.UpdateOrderStatus(orderId, normalizedStatus);
     }
-    public async Task<Order> CancelOrderAsync(int orderId)
-    {
-        return await _repo.CancelOrderAsync(orderId);
-    }
+
 }
