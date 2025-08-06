@@ -1,10 +1,11 @@
 # Full Stack Application with OpenTelemetry Monitoring
 
-นี่คือ Full Stack Application ที่ประกอบด้วย .NET Backend API และ OpenTelemetry monitoring stack:
+นี่คือ Full Stack Application ที่ประกอบด้วย .NET Backend API, Frontend UI และ OpenTelemetry monitoring stack:
 
 ## Components (ส่วนประกอบ)
 
-### Backend Services
+### Application Services
+- **Frontend UI** - Web user interface (Nuxt.js)
 - **.NET API** - Backend API service (ASP.NET Core)
 
 ### Database Services  
@@ -22,6 +23,7 @@
 
 | Service | Port | Description |
 |---------|------|-------------|
+| **Frontend UI** | **3006** | **Main web application** |
 | **Backend API** | **8080** | **Main API endpoint** |
 | Grafana (via Nginx) | 3005 | Main access point |
 | Grafana Node 1 | 3000 | Direct access |
@@ -46,12 +48,9 @@
 ```
 ├── docker-compose.yml          # Main compose file (รวมทุกอย่าง)
 ├── BackEnd/                   # .NET API source code
-│   ├── Program.cs
-│   ├── appsettings.json
-│   ├── Controllers/
-│   ├── Models/
-│   ├── Services/
-│   └── ...
+│   ├── ...
+├── front/                      # Frontend Nuxt.js source code
+│   ├── ...
 └── Opentelemetry/            # Monitoring configurations
     ├── grafana/
     │   ├── config/grafana.ini
@@ -74,7 +73,7 @@
 ### 1. เริ่มต้นระบบทั้งหมด
 
 ```bash
-# เริ่มต้น services ทั้งหมด (Backend API + Monitoring Stack)
+# เริ่มต้น services ทั้งหมด (Backend API + Frontend + Monitoring Stack)
 docker compose up -d
 
 # ดู logs ของทุก services
@@ -82,6 +81,9 @@ docker compose logs -f
 
 # ดู logs เฉพาะ API
 docker compose logs -f api
+
+# ดู logs เฉพาะ Frontend
+docker compose logs -f frontend
 
 # ดู status ของทุก containers
 docker compose ps
@@ -100,11 +102,10 @@ docker compose down -v
 ## การเข้าใช้งาน
 
 ### Main Application
-1. **Backend API**: http://localhost:8080
+1. **Frontend UI**: http://localhost:3006
+2. **Backend API**: http://localhost:8080
    - Swagger UI: http://localhost:8080/swagger
    - Health Check: http://localhost:8080/health
-
-### Monitoring & Observability
 
 ### Monitoring & Observability
 1. **Grafana**: http://localhost:3005
@@ -152,6 +153,7 @@ API เชื่อมต่อกับ PostgreSQL cluster ผ่าน HAProxy
 ```bash
 # ดู logs ของ service เฉพาะ
 docker compose logs api
+docker compose logs frontend
 docker compose logs grafana-node-1
 docker compose logs prometheus
 docker compose logs postgres-node-1
@@ -165,11 +167,13 @@ docker compose logs -f [service-name]
 ```bash
 # เข้าไปใน container
 docker compose exec api bash
+docker compose exec frontend sh
 docker compose exec grafana-node-1 sh
 docker compose exec prometheus sh
 
 # ตรวจสอบ network connectivity
 docker compose exec api ping postgres-haproxy
+docker compose exec frontend ping api
 docker compose exec grafana-node-1 ping prometheus
 ```
 
@@ -200,6 +204,7 @@ API ได้รับการกำหนดค่าให้ส่งข้�
 - **Grafana**: มี 2 nodes พร้อม Nginx load balancer
 - **Prometheus**: configured retention 7 วัน
 - **API**: .NET 8.0 ASP.NET Core application
+- **Frontend**: Nuxt.js application
 - **OpenTelemetry**: รวบรวมข้อมูล metrics, traces, และ logs
 - **ข้อมูลจัดเก็บ**: ใน Docker volumes
 
@@ -219,6 +224,7 @@ API ได้รับการกำหนดค่าให้ส่งข้�
 ## Container Dependencies
 
 ```
+frontend -> api
 api -> postgres-haproxy, otel-collector
 postgres-haproxy -> postgres-node-1, postgres-node-2
 grafana-* -> postgres-haproxy
