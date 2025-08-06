@@ -1,0 +1,167 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: "Prompt", sans-serif !important;
+}
+.pdf {
+  font-family: "Sarabun", sans-serif !important;
+}
+:root {
+  --dp-font-family: "Prompt", sans-serif !important;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-top-left-radius: 5px;
+}
+::-webkit-scrollbar-corner {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom-right-radius: 5px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 16px;
+}
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.8);
+}
+
+.ck-content {
+  overflow: auto;
+  & .image {
+    margin: 0.2em auto !important;
+  }
+
+  & .image-style-side {
+    float: right;
+    margin-left: var(--ck-image-style-spacing);
+  }
+
+  & .image-style-align-left {
+    float: left;
+    margin-right: var(--ck-image-style-spacing);
+  }
+
+  & .image-style-align-center {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  & .image-style-align-right {
+    float: right;
+    margin-left: var(--ck-image-style-spacing);
+  }
+
+  & .text-tiny {
+    font-size: 0.7em;
+  }
+
+  & .text-small {
+    font-size: 0.85em;
+  }
+
+  & .text-big {
+    font-size: 1.4em;
+  }
+
+  & .text-huge {
+    font-size: 1.8em;
+  }
+}
+.ck.ck-powered-by {
+  display: none !important;
+}
+.ck.ck-dialog-overlay {
+  background-color: transparent !important;
+}
+.ck-body-wrapper {
+  z-index: 1300 !important;
+}
+
+/* Common style for all nav buttons */
+.fc-button {
+  padding: 0.3em 0.45em !important;
+  font-size: 0.9em !important;
+}
+.fc-prev-button,
+.fc-next-button,
+.fc-dayGridMonth-button,
+.fc-listMonth-button,
+.fc-today-button {
+  background-color: var(--color-info) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Hover state */
+.fc-prev-button:hover:not(:disabled),
+.fc-next-button:hover:not(:disabled),
+.fc-dayGridMonth-button:hover:not(:disabled),
+.fc-listMonth-button:hover:not(:disabled),
+.fc-today-button:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-info) 80%, black) !important;
+  cursor: pointer;
+}
+
+/* Active or focus state */
+.fc-prev-button:active,
+.fc-next-button:active,
+.fc-dayGridMonth-button:active,
+.fc-listMonth-button:active,
+.fc-today-button:active,
+.fc-prev-button:focus,
+.fc-next-button:focus,
+.fc-dayGridMonth-button:focus,
+.fc-listMonth-button:focus,
+.fc-today-button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Disabled state */
+.fc-prev-button:disabled,
+.fc-next-button:disabled,
+.fc-dayGridMonth-button:disabled,
+.fc-listMonth-button:disabled,
+.fc-today-button:disabled {
+  background-color: #ccc !important;
+  color: #666 !important;
+  cursor: not-allowed;
+}
+
+.fc-button-active {
+  background-color: color-mix(in srgb, var(--color-info) 70%, black) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* pointer cursor for every event element */
+.fc-daygrid-event,
+.fc-event {
+  cursor: pointer;
+}
+
+.fc-daygrid-day.today:hover,
+.fc-daygrid-day:not(.fc-day-past):hover {
+  cursor: pointer;
+  background-color: var(--color-neutral-50) !important;
+}
+.fc-toolbar-title {
+  font-size: 1.3em !important;
+  font-weight: bold !important;
+}

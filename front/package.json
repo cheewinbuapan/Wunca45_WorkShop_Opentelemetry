@@ -1,0 +1,49 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "start": "node .output/server/index.mjs",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@iconify-json/fa6-brands": "^1.2.6",
+    "@iconify-json/fa6-regular": "^1.2.4",
+    "@iconify-json/fa6-solid": "^1.2.4",
+    "@nuxt/eslint": "1.7.1",
+    "@nuxt/ui": "3.2.0",
+    "@nuxtjs/google-fonts": "3.2.0",
+    "@nuxtjs/i18n": "10.0.3",
+    "@pinia/nuxt": "^0.11.2",
+    "@sentry/nuxt": "10",
+    "@types/lodash": "^4.17.20",
+    "@vuepic/vue-datepicker": "^11.0.2",
+    "@vueuse/integrations": "^13.6.0",
+    "dayjs-nuxt": "2.1.11",
+    "email-validator": "^2.0.4",
+    "eslint": "^9.0.0",
+    "jwt-decode": "^4",
+    "lodash": "^4.17.21",
+    "maska": "^3.2.0",
+    "nuxt": "^4.0.2",
+    "pinia": "^3.0.3",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "thai-baht-text-ts": "^1.1.0",
+    "typescript": "^5.6.3",
+    "vue": "^3.5.17",
+    "vue-clipboard3": "^2.0.0",
+    "vue-currency-input": "^3.2.1",
+    "vue-router": "^4.5.1",
+    "yup": "^1.6.1"
+  },
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610",
+  "devDependencies": {},
+  "resolutions": {
+    "@vercel/nft": "^0.27.4"
+  }
+}
