@@ -17,6 +17,7 @@
 - **Loki** - Log aggregation
 - **Tempo** - Distributed tracing
 - **OpenTelemetry Collector** - Telemetry data collection
+- **Blackbox Exporter** - Endpoint monitoring และ health checks
 - **Alertmanager** - Alert management
 
 ## Ports (พอร์ต)
@@ -34,6 +35,7 @@
 | PostgreSQL Node 1 | 5432 | Database |
 | PostgreSQL Node 2 | 5433 | Database |
 | PostgreSQL HAProxy | 5434 | Load balanced DB |
+| Blackbox Exporter | 9115 | Endpoint monitoring |
 | Alertmanager | 9093 | Alerts |
 | OpenTelemetry | 4317, 8888, 8889 | Telemetry |
 
@@ -62,6 +64,7 @@
     ├── loki/loki.yml
     ├── tempo/tempo.yml
     ├── otel/otel.yml
+    ├── blackbox/blackbox.yml
     ├── alertmanager/alertmanager.yml
     ├── nginx/nginx.conf
     ├── haproxy/postgres.cfg
@@ -120,6 +123,8 @@ docker compose down -v
 
 5. **Loki (Logs)**: http://localhost:3100
 
+6. **Blackbox Exporter**: http://localhost:9115
+
 ## Database Connection
 
 API เชื่อมต่อกับ PostgreSQL cluster ผ่าน HAProxy:
@@ -156,6 +161,7 @@ docker compose logs api
 docker compose logs frontend
 docker compose logs grafana-node-1
 docker compose logs prometheus
+docker compose logs blackbox
 docker compose logs postgres-node-1
 
 # ดู logs แบบ real-time
@@ -170,6 +176,7 @@ docker compose exec api bash
 docker compose exec frontend sh
 docker compose exec grafana-node-1 sh
 docker compose exec prometheus sh
+docker compose exec blackbox sh
 
 # ตรวจสอบ network connectivity
 docker compose exec api ping postgres-haproxy
@@ -198,11 +205,22 @@ API ได้รับการกำหนดค่าให้ส่งข้�
 - **Traces**: ส่งไปยัง Tempo  
 - **Logs**: ส่งไปยัง Loki
 
+### Blackbox Exporter สำหรับ Endpoint Monitoring
+
+Blackbox Exporter ใช้สำหรับ:
+- **HTTP/HTTPS endpoint monitoring**: ตรวจสอบว่า websites และ APIs ทำงานปกติ
+- **Health checks**: ping และ TCP connectivity tests
+- **Response time monitoring**: วัดเวลาตอบสนองของ endpoints
+- **SSL certificate monitoring**: ตรวจสอบอายุของ SSL certificates
+
+Configuration อยู่ใน `Opentelemetry/blackbox/blackbox.yml`
+
 ## Configuration Notes
 
 - **PostgreSQL**: ใช้ replication setup ด้วย repmgr (2 nodes + HAProxy load balancer)
 - **Grafana**: มี 2 nodes พร้อม Nginx load balancer
 - **Prometheus**: configured retention 7 วัน
+- **Blackbox Exporter**: ใช้สำหรับ HTTP/HTTPS endpoint monitoring และ health checks
 - **API**: .NET 8.0 ASP.NET Core application
 - **Frontend**: Nuxt.js application
 - **OpenTelemetry**: รวบรวมข้อมูล metrics, traces, และ logs
