@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Humanizer.Configuration;
 using itsc_dotnet_practice.Data;
 using itsc_dotnet_practice.Document;
 using itsc_dotnet_practice.Document.Interface;
@@ -15,9 +16,18 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry;
+using Serilog;
 using System;
 using System.Diagnostics;
 using System.Text;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +37,7 @@ var builder = WebApplication.CreateBuilder(args);
 string jwtKey = builder.Configuration["JWT_KEY"] ?? "your_jwt_secret_key";
 string jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "your_issuer";
 string jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "your_audience";
-
+IConfiguration configuration = builder.Configuration;
 
 // Register DB context
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -70,6 +80,51 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Register HttpClient for external API calls (e.g., Pokémon API)
 builder.Services.AddHttpClient();
+builder.Services.AddHealthChecks();
+builder.Host.UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration
+       .ReadFrom.Configuration(hostingContext.Configuration)
+       .WriteTo.OpenTelemetry(options =>
+       {
+           options.Endpoint = $"{configuration.GetValue<string>("Otlp:Endpoint")}/v1/logs";
+           options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
+           options.ResourceAttributes = new Dictionary<string, object>
+           {
+               ["service.name"] = configuration.GetValue<string>("Otlp:ServiceName")
+           };
+       }));
+Action<ResourceBuilder> appResourceBuilder =
+resource => resource
+    .AddTelemetrySdk()
+    .AddService(configuration.GetValue<string>("Otlp:ServiceName"));
+builder.Services.AddOpenTelemetry()
+.ConfigureResource(appResourceBuilder)
+.WithTracing(builder => builder
+    .AddAspNetCoreInstrumentation()
+    .AddHttpClientInstrumentation()
+     .AddEntityFrameworkCoreInstrumentation(options =>
+     {
+         options.EnrichWithIDbCommand = (activity, command) =>
+         {
+             var stateDisplayName = $"{command.CommandText}";
+             activity.DisplayName = stateDisplayName;
+             activity.SetTag("db.name", stateDisplayName);
+         };
+     })
+    .AddConsoleExporter()
+    .AddSource("APITracing")
+    //.AddConsoleExporter()
+    .AddOtlpExporter(options => options.Endpoint = new Uri(configuration.GetValue<string>("Otlp:Endpoint")))
+)
+.WithMetrics(builder => builder
+    .AddRuntimeInstrumentation()
+    .AddAspNetCoreInstrumentation()
+                .AddMeter("Microsoft.AspNetCore.Hosting")
+.AddMeter("Microsoft.AspNetCore.Server.Kestrel")
+// Metrics provided by System.Net libraries
+.AddMeter("System.Net.Http")
+.AddMeter("System.Net.NameResolution")
+.AddPrometheusExporter()
+    .AddOtlpExporter(options => options.Endpoint = new Uri(configuration.GetValue<string>("Otlp:Endpoint"))));
 
 // Authorization & Controllers
 builder.Services.AddAuthorization();
@@ -132,6 +187,18 @@ using (var scope = app.Services.CreateScope())
     // Seed products from Pokémon API
     await ProductSeeder.Seed(services);
 }
+app.UseSerilogRequestLogging();
+app.MapPrometheusScrapingEndpoint();
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    AllowCachingResponses = false,
+    ResultStatusCodes =
+                {
+                    [HealthStatus.Healthy] = StatusCodes.Status200OK,
+                    [HealthStatus.Degraded] = StatusCodes.Status200OK,
+                    [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+                }
+});
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
