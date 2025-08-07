@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using DotNetEnv;
 using Humanizer;
 using itsc_dotnet_practice.Models;
 using itsc_dotnet_practice.Models.Dtos;
@@ -43,11 +42,14 @@ public class AuthService : IAuthService
         if (parts.Length != 2) return null;
 
         //return await _userRepo.GetValidationBasicAuth(parts[0], parts[1]);
-        if (Env.GetString("ADMIN_USERNAME") == null || Env.GetString("ADMIN_PASSWORD") == null)
+        var adminUsername = _config["ADMIN_USERNAME"];
+        var adminPassword = _config["ADMIN_PASSWORD"];
+        
+        if (string.IsNullOrEmpty(adminUsername) || string.IsNullOrEmpty(adminPassword))
         {
             throw new System.Exception("ADMIN_USERNAME or ADMIN_PASSWORD is not set.");
         }
-        if (Env.GetString("ADMIN_USERNAME") != parts[0] || Env.GetString("ADMIN_PASSWORD") != parts[1])
+        if (adminUsername != parts[0] || adminPassword != parts[1])
         {
             return null;
         }
@@ -97,7 +99,7 @@ public class AuthService : IAuthService
 
     public async Task<User> Register(RegisterRequestDto register)
     {
-        User existingUser = await _userRepo.GetUserByUsername(register.Username);
+        User? existingUser = await _userRepo.GetUserByUsername(register.Username);
         if (existingUser != null)
         {
             throw new Exception("Username already exists");

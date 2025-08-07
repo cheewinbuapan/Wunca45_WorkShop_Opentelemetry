@@ -132,11 +132,11 @@ using (var scope = app.Services.CreateScope())
     // Seed products from Pokémon API
     await ProductSeeder.Seed(services);
 }
-
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.UseCors("AllowAll");
+
 
 app.Run();
