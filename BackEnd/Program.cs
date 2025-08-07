@@ -28,8 +28,14 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+//if (!builder.Environment.IsDevelopment())
+//{
+//    builder.WebHost.UseSentry();
+//}
 
 // Read DB & JWT values with defaults to avoid errors
 
