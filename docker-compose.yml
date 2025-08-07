@@ -1,6 +1,18 @@
 version: "3.4"
 
 services:
+  blackbox:
+    image: prom/blackbox-exporter:v0.23.0
+    container_name: blackbox
+    restart: unless-stopped
+    ports:
+      - 9115:9115
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./Opentelemetry/blackbox/blackbox.yml:/etc/blackbox/blackbox.yml
+    command: --config.file=/etc/blackbox/blackbox.yml
+    networks:
+      - backend
   # Backend API Service
   api:
     build: ./BackEnd
