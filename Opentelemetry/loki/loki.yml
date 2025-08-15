@@ -2,7 +2,10 @@ auth_enabled: false
 
 server:
   http_listen_port: 3100
-  # grpc_listen_port: 9096
+  grpc_listen_port: 9096
+  log_level: info
+  log_format: json
+  graceful_shutdown_timeout: 30s
 
 common:
   path_prefix: /loki
@@ -34,6 +37,19 @@ analytics:
 
 limits_config:
   retention_period: 90d
+  # Performance tuning for production
+  max_query_length: 12000h
+  max_query_parallelism: 32
+  max_streams_per_user: 0
+  max_line_size: 256000
+  max_entries_limit_per_query: 5000
+  max_global_streams_per_user: 0
+  ingestion_rate_mb: 10
+  ingestion_burst_size_mb: 20
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  per_stream_rate_limit: 3MB
+  per_stream_rate_limit_burst: 15MB
 
 compactor:
   working_directory: /loki/retention

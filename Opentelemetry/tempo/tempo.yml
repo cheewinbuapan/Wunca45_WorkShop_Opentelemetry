@@ -1,30 +1,55 @@
 server:
   http_listen_port: 3200
+  grpc_listen_port: 9095
+  log_level: info
+  log_format: json
 
 distributor:
   receivers:
     otlp:
       protocols:
         http:
+          endpoint: 0.0.0.0:4008
         grpc:
-          endpoint: tempo:4007
+          endpoint: 0.0.0.0:4007
+  ring:
+    kvstore:
+      store: memberlist
 
-# ingester:
-#   max_block_duration: 1h               # cut the headblock when this much time passes. this is being set for demo purposes and should probably be left alone normally
-
+# Production-optimized ingester configuration
 ingester:
   trace_idle_period: 10s
-  max_block_duration: 1m
+  max_block_duration: 5m               # Increased for better performance in production
+  max_block_bytes: 1_000_000           # 1MB max block size
+  flush_check_period: 10s              # How often to check for flush
+  complete_block_timeout: 5m           # Timeout for block completion
 
 
 compactor:
   compaction:
-    block_retention: 720h                # overall Tempo trace retention. set for demo purposes, default is 14 days
+    block_retention: 720h             # 90 days retention for production (was 720h/30 days)
+    compacted_block_retention: 1h      # How long to keep compacted blocks
+    retention_concurrency: 10          # Number of concurrent retention jobs
+    v2_in_buffer_bytes: 5242880        # 5MB buffer for v2 blocks
+    v2_out_buffer_bytes: 20971520      # 20MB output buffer
+    v2_prefetch_traces_count: 1000     # Prefetch traces for better performance
 
 
 metrics_generator:
   storage:
     path: /var/tempo/generator/wal
+  traces_storage:
+    path: /var/tempo/generator/traces
+  ring:
+    kvstore:
+      store: memberlist
+  processor:
+    service_graphs:
+      histogram_buckets: [0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8]
+      dimensions: [cluster, namespace]
+    span_metrics:
+      histogram_buckets: [0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+      dimensions: [service.name, span.name, span.kind, status.code]
 
 
 storage:
