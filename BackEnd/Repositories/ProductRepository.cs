@@ -66,4 +66,11 @@ public class ProductRepository : IProductRepository
         _context.SaveChanges();
         return true;
     }
+
+    public async Task<bool> TestCreateProduct(List<Product> products)
+    {
+        _context.Products.AddRange(products);
+        _context.SaveChanges();
+        return true;
+    }
 }

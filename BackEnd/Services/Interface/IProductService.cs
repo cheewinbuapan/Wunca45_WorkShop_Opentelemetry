@@ -13,5 +13,7 @@ namespace itsc_dotnet_practice.Services.Interface
         Task<Product> CreateProduct(ProductDto.Request productDto);
         Task<Product> UpdateProduct(int id, Product productDto);
         Task<bool> DeleteProduct(int id);
+
+        Task<bool> TestAddProduct();
     }
 }

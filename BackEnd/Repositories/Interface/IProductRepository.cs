@@ -13,4 +13,6 @@ public interface IProductRepository
     Task<Product> CreateProduct(ProductDto.Request product);
     Task<Product> UpdateProduct(int id, Product product);
     Task<bool> DeleteProduct(int id);
+
+    Task<bool> TestCreateProduct(List<Product> products);
 }
