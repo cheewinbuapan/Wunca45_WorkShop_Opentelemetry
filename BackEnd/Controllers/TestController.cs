@@ -12,7 +12,7 @@ using itsc_dotnet_practice.Services;
 
 namespace itsc_dotnet_practice.Controllers;
 
-[Route("api/orders")]
+[Route("api/test")]
 [ApiController]
 public class TestController : ControllerBase
 {
