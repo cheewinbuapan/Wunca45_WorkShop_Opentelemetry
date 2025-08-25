@@ -4,6 +4,7 @@ using itsc_dotnet_practice.Models.Dtos;
 using itsc_dotnet_practice.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -17,11 +18,13 @@ public class OrderController : ControllerBase
 {
     private readonly IOrderService _service;
     private readonly IMapper _mapper;
+    private readonly ILogger<OrderController> _logger;
 
-    public OrderController(IOrderService service, IMapper mapper)
+    public OrderController(IOrderService service, IMapper mapper, ILogger<OrderController> logger)
     {
         _service = service;
         _mapper = mapper;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -71,6 +74,8 @@ public class OrderController : ControllerBase
         {
             return Unauthorized("User ID not found or invalid in token.");
         }
+        String Username = User.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+        _logger.LogInformation("User {Username} (ID: {UserId}) is creating a new order.", Username, userId);
         try
         {
             var newOrder = await _service.CreateOrder(request, userId);
