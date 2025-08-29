@@ -21,9 +21,7 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - postgres-node-1
-      - postgres-node-2
-      - postgres-haproxy
+      - postgres
       - otel-collector
     networks:
       - backend
@@ -40,79 +38,27 @@ services:
     networks:
       - backend
 
-  # Database Services
-  postgres-node-1:
-    image: bitnami/postgresql-repmgr:latest
-    container_name: postgres-node-1
+  # Database Service
+  postgres:
+    image: postgres:15
+    container_name: postgres
     restart: unless-stopped
     environment:
-      - POSTGRESQL_POSTGRES_PASSWORD=adminpassword
-      - POSTGRESQL_DATABASE=repmgr
-      - POSTGRESQL_USERNAME=repmgr
-      - POSTGRESQL_PASSWORD=repmgrpass
-      - REPMGR_USERNAME=repmgr
-      - REPMGR_PASSWORD=repmgrpass
-      - REPMGR_PRIMARY_HOST=postgres-node-1
-      - REPMGR_NODE_NAME=postgres-node-1
-      - REPMGR_NODE_NETWORK_NAME=postgres-node-1
-      - REPMGR_PORT_NUMBER=5432
-      - REPMGR_PARTNER_NODES=postgres-node-1,postgres-node-2
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=adminpassword
     ports:
       - "5432:5432"
     volumes:
-      - postgres-node-1-data:/bitnami/postgresql
+      - postgres-data:/var/lib/postgresql/data
       - ./Opentelemetry/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U repmgr"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 10
-
-  postgres-node-2:
-    image: bitnami/postgresql-repmgr:latest
-    container_name: postgres-node-2
-    restart: unless-stopped
-    depends_on:
-      - postgres-node-1
-    environment:
-      - POSTGRESQL_POSTGRES_PASSWORD=adminpassword
-      - POSTGRESQL_DATABASE=repmgr
-      - POSTGRESQL_USERNAME=repmgr
-      - POSTGRESQL_PASSWORD=repmgrpass
-      - REPMGR_USERNAME=repmgr
-      - REPMGR_PASSWORD=repmgrpass
-      - REPMGR_PRIMARY_HOST=postgres-node-1
-      - REPMGR_NODE_NAME=postgres-node-2
-      - REPMGR_NODE_NETWORK_NAME=postgres-node-2
-      - REPMGR_PORT_NUMBER=5432
-      - REPMGR_PARTNER_NODES=postgres-node-1,postgres-node-2
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres-node-2-data:/bitnami/postgresql
-    networks:
-      - backend
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U repmgr"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  postgres-haproxy:
-    image: haproxy:latest
-    container_name: postgres-haproxy
-    restart: unless-stopped
-    ports:
-      - "5434:5432"
-    volumes:
-      - ./Opentelemetry/haproxy/postgres.cfg:/usr/local/etc/haproxy/haproxy.cfg
-    depends_on:
-      - postgres-node-1
-      - postgres-node-2
-    networks:
-      - backend
 
   # Monitoring and Observability Services
   grafana-node-1:
@@ -128,9 +74,7 @@ services:
       - ./Opentelemetry/grafana/provisioning:/etc/grafana/provisioning
       - ./Opentelemetry/grafana/config/grafana.ini:/etc/grafana/grafana.ini
     depends_on:
-      - postgres-haproxy
-      - postgres-node-1
-      - postgres-node-2
+      - postgres
     networks:
       - backend
 
@@ -148,9 +92,7 @@ services:
       - ./Opentelemetry/grafana/provisioning:/etc/grafana/provisioning
       - ./Opentelemetry/grafana/config/grafana.ini:/etc/grafana/grafana.ini
     depends_on:
-      - postgres-haproxy
-      - postgres-node-1
-      - postgres-node-2
+      - postgres
     networks:
       - backend
   
@@ -248,8 +190,7 @@ services:
       - backend
 
 volumes:
-  postgres-node-1-data:
-  postgres-node-2-data:
+  postgres-data:
   grafana-node-1-data:
   grafana-node-2-data:
   prometheus:
