@@ -9,7 +9,7 @@
 - **.NET API** - Backend API service (ASP.NET Core)
 
 ### Database Services  
-- **PostgreSQL** (2 nodes + HAProxy) - Database cluster สำหรับ application และ Grafana
+- **PostgreSQL** - Single database instance สำหรับ application และ Grafana
 
 ### Monitoring & Observability Services
 - **Grafana** (2 nodes + Nginx Load Balancer) - Visualization และ Dashboard
@@ -32,9 +32,7 @@
 | Prometheus | 9090 | Metrics |
 | Loki | 3100 | Logs |
 | Tempo | 3200 | Tracing |
-| PostgreSQL Node 1 | 5432 | Database |
-| PostgreSQL Node 2 | 5433 | Database |
-| PostgreSQL HAProxy | 5434 | Load balanced DB |
+| PostgreSQL | 5432 | Database |
 | Blackbox Exporter | 9115 | Endpoint monitoring |
 | Alertmanager | 9093 | Alerts |
 | OpenTelemetry | 4317, 8888, 8889 | Telemetry |
@@ -67,7 +65,6 @@
     ├── blackbox/blackbox.yml
     ├── alertmanager/alertmanager.yml
     ├── nginx/nginx.conf
-    ├── haproxy/postgres.cfg
     └── postgres/init.sql
 ```
 
@@ -127,12 +124,9 @@ docker compose down -v
 
 ## Database Connection
 
-API เชื่อมต่อกับ PostgreSQL cluster ผ่าน HAProxy:
-- **Connection String**: `Server=postgres-haproxy;Port=5432;Database=repmgr;User Id=repmgr;Password=repmgrpass;`
-- **Direct PostgreSQL Access**: 
-  - Node 1: `localhost:5432`
-  - Node 2: `localhost:5433`  
-  - HAProxy Load Balancer: `localhost:5434`
+API เชื่อมต่อกับ PostgreSQL database:
+- **Connection String**: `Server=postgres;Port=5432;Database=postgres;User Id=postgres;Password=adminpassword;`
+- **Database Access**: `localhost:5432`
 
 ## Troubleshooting
 
@@ -141,8 +135,8 @@ API เชื่อมต่อกับ PostgreSQL cluster ผ่าน HAProxy
 1. **Port conflict**: ถ้า port ติดขัด ให้แก้ไข ports ใน docker-compose.yml
 
 2. **API ไม่สามารถเชื่อมต่อ Database**: 
-   - ตรวจสอบว่า PostgreSQL containers เริ่มเสร็จแล้ว
-   - ดู logs: `docker compose logs postgres-node-1 postgres-node-2`
+   - ตรวจสอบว่า PostgreSQL container เริ่มเสร็จแล้ว
+   - ดู logs: `docker compose logs postgres`
 
 3. **Configuration files missing**: ตรวจสอบว่าไฟล์ config ใน `Opentelemetry/` folder ทั้งหมดมีอยู่
 
@@ -162,7 +156,7 @@ docker compose logs frontend
 docker compose logs grafana-node-1
 docker compose logs prometheus
 docker compose logs blackbox
-docker compose logs postgres-node-1
+docker compose logs postgres
 
 # ดู logs แบบ real-time
 docker compose logs -f [service-name]
@@ -179,7 +173,7 @@ docker compose exec prometheus sh
 docker compose exec blackbox sh
 
 # ตรวจสอบ network connectivity
-docker compose exec api ping postgres-haproxy
+docker compose exec api ping postgres
 docker compose exec frontend ping api
 docker compose exec grafana-node-1 ping prometheus
 ```
@@ -217,7 +211,7 @@ Configuration อยู่ใน `Opentelemetry/blackbox/blackbox.yml`
 
 ## Configuration Notes
 
-- **PostgreSQL**: ใช้ replication setup ด้วย repmgr (2 nodes + HAProxy load balancer)
+- **PostgreSQL**: ใช้ single database instance 
 - **Grafana**: มี 2 nodes พร้อม Nginx load balancer
 - **Prometheus**: configured retention 7 วัน
 - **Blackbox Exporter**: ใช้สำหรับ HTTP/HTTPS endpoint monitoring และ health checks
@@ -243,9 +237,8 @@ Configuration อยู่ใน `Opentelemetry/blackbox/blackbox.yml`
 
 ```
 frontend -> api
-api -> postgres-haproxy, otel-collector
-postgres-haproxy -> postgres-node-1, postgres-node-2
-grafana-* -> postgres-haproxy
+api -> postgres, otel-collector
+grafana-* -> postgres
 tempo -> otel-collector
 prometheus -> alertmanager
 nginx -> grafana-node-1, grafana-node-2
