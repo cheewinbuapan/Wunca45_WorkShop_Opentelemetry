@@ -13,7 +13,9 @@ export default defineNuxtPlugin(() => {
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
 
-    integrations: [Sentry.replayIntegration()],
+    integrations: [Sentry.replayIntegration(),
+      Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
+    ],
 
     debug: sentryEnv !== "production",
     enableLogs: true,
