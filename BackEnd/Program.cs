@@ -32,10 +32,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
-//if (!builder.Environment.IsDevelopment())
-//{
-//    builder.WebHost.UseSentry();
-//}
+if (!builder.Environment.IsDevelopment())
+{
+    builder.WebHost.UseSentry();
+}
 
 // Read DB & JWT values with defaults to avoid errors
 

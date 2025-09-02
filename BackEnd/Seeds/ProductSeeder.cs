@@ -1,6 +1,7 @@
 ﻿using itsc_dotnet_practice.Data;
 using itsc_dotnet_practice.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Sentry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ public static class ProductSeeder
 {
     public static async Task Seed(IServiceProvider serviceProvider)
     {
+        SentrySdk.CaptureMessage("Hello Sentry");
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
