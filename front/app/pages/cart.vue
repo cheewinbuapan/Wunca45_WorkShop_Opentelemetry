@@ -83,7 +83,7 @@ const onPurchaseOrder = () => {
 const onSavePurchaseOrder = async () => {
   const { error } = await useOrder().create({
     shippingAddress: ct.shippingAddress,
-    orderDetails: ct.cart.map((item) => ({
+    orderDetails: ct.selectedProducts().map((item) => ({
       productId: item.product.id!,
       quantity: item.quantity,
     })),
