@@ -4,17 +4,18 @@ export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
   const sentryDsn = config.public.sentryDsn;
   const sentryEnv = config.public.nodeEnv;
+
+  if (!sentryDsn) return;
+
   Sentry.init({
     dsn: sentryDsn,
     environment: sentryEnv,
     enabled: !!sentryDsn,
-
-    tracesSampleRate: 1.0,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-
-  integrations: [
+    
+    integrations: [
       Sentry.replayIntegration(),
+      Sentry.browserTracingIntegration(),
+      Sentry.browserProfilingIntegration(),
       Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
       Sentry.feedbackIntegration({
         colorScheme: "light",
@@ -22,6 +23,11 @@ export default defineNuxtPlugin(() => {
         isEmailRequired: true,
       }),
     ],
+    
+    tracesSampleRate: 1.0,
+    profilesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
 
     debug: sentryEnv !== "production",
     enableLogs: true,
