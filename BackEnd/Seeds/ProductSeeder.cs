@@ -15,7 +15,7 @@ public static class ProductSeeder
 {
     public static async Task Seed(IServiceProvider serviceProvider)
     {
-        SentrySdk.CaptureMessage("Hello Sentry");
+        //SentrySdk.CaptureMessage("Hello Sentry");
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
