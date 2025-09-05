@@ -30,7 +30,7 @@ import {
   startInactiveSpan,
 } from "@sentry/nuxt";
 definePageMeta({
-  middleware: "blank",
+  layout: "blank",
 });
 
 function throwError() {

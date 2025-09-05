@@ -243,3 +243,6 @@ tempo -> otel-collector
 prometheus -> alertmanager
 nginx -> grafana-node-1, grafana-node-2
 ```
+
+## File Presentation
+https://www.canva.com/design/DAGvvs9naLM/Z3mjBufGnWqhekpRmNvBFg/view?utm_content=DAGvvs9naLM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h8e05a7dffb
